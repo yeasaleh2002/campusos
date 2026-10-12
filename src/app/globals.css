@@ -1,0 +1,438 @@
+@import "tailwindcss";
+
+/*
+ * CampusOS design system - City University.
+ * Tokens live here (Tailwind v4 reads @theme as its config). Colours are CSS
+ * variables so light/dark switch without re-rendering; dark mode is class-based
+ * (`.dark` on <html>, set by next-themes before paint - no flash).
+ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ───────────── Light theme (default) ───────────── */
+:root {
+  --bg: #f6f7fb;
+  --surface: #ffffff;
+  --surface-2: #f0f2f8;
+  --surface-3: #e7eaf3;
+  --fg: #0b1020;
+  --fg-muted: #535d73; /* 6.4:1 on white */
+  --fg-subtle: #5c657a; /* 5.9:1 on white, >= 4.5:1 on tinted surfaces */
+  --border: #e2e6ef;
+  --border-strong: #cdd3e1;
+
+  --primary: #4338ca; /* CU Indigo - 7.6:1 with white text */
+  --primary-hover: #3730a3;
+  --primary-fg: #ffffff;
+  --primary-soft: #eef0ff;
+  --primary-soft-fg: #3730a3;
+
+  --accent: #047857; /* Campus Emerald */
+  --accent-hover: #065f46;
+  --accent-fg: #ffffff;
+  --accent-soft: #e6f7f0;
+  --accent-soft-fg: #065f46;
+
+  --saffron: #b45309;
+  --saffron-soft: #fdf3e2;
+
+  --success: #047857;
+  --success-soft: #e6f7f0;
+  --warning: #b45309;
+  --warning-soft: #fdf3e2;
+  --danger: #b91c1c;
+  --danger-soft: #fdecec;
+  --info: #0369a1;
+  --info-soft: #e7f3fb;
+
+  --ring: #4f46e5;
+  --overlay: rgb(8 11 24 / 0.55);
+  --glass: rgb(255 255 255 / 0.72);
+  --glass-border: rgb(255 255 255 / 0.65);
+
+  --shadow-xs: 0 1px 2px rgb(15 23 42 / 0.05);
+  --shadow-sm: 0 1px 3px rgb(15 23 42 / 0.06), 0 1px 2px rgb(15 23 42 / 0.04);
+  --shadow-md: 0 8px 24px -8px rgb(15 23 42 / 0.12), 0 2px 6px rgb(15 23 42 / 0.04);
+  --shadow-lg: 0 24px 48px -16px rgb(15 23 42 / 0.18), 0 4px 12px rgb(15 23 42 / 0.05);
+  --shadow-glow: 0 10px 40px -10px rgb(67 56 202 / 0.45);
+
+  --mesh-1: rgb(99 102 241 / 0.18);
+  --mesh-2: rgb(16 185 129 / 0.14);
+  --mesh-3: rgb(245 158 11 / 0.1);
+  --grain-opacity: 0.035;
+
+  color-scheme: light;
+}
+
+/* ───────────── Dark theme ───────────── */
+.dark {
+  --bg: #070a16;
+  --surface: #0d1224;
+  --surface-2: #131a31;
+  --surface-3: #1b2340;
+  --fg: #e9ecf6;
+  --fg-muted: #a3acc2;
+  --fg-subtle: #8a94ad;
+  --border: #212a45;
+  --border-strong: #2e395a;
+
+  --primary: #8b93ff;
+  --primary-hover: #a5abff;
+  --primary-fg: #0b1020;
+  --primary-soft: #1d2150;
+  --primary-soft-fg: #c7cbff;
+
+  --accent: #34d399;
+  --accent-hover: #6ee7b7;
+  --accent-fg: #052e22;
+  --accent-soft: #0d2e26;
+  --accent-soft-fg: #8ff0c9;
+
+  --saffron: #fbbf24;
+  --saffron-soft: #2f2410;
+
+  --success: #34d399;
+  --success-soft: #0d2e26;
+  --warning: #fbbf24;
+  --warning-soft: #2f2410;
+  --danger: #f87171;
+  --danger-soft: #3a1418;
+  --info: #38bdf8;
+  --info-soft: #0c2a3d;
+
+  --ring: #a5abff;
+  --overlay: rgb(2 4 12 / 0.7);
+  --glass: rgb(13 18 36 / 0.7);
+  --glass-border: rgb(255 255 255 / 0.07);
+
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.45);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 24px 48px -16px rgb(0 0 0 / 0.7);
+  --shadow-glow: 0 10px 40px -10px rgb(139 147 255 / 0.45);
+
+  --mesh-1: rgb(99 102 241 / 0.22);
+  --mesh-2: rgb(16 185 129 / 0.14);
+  --mesh-3: rgb(245 158 11 / 0.07);
+  --grain-opacity: 0.05;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-fg: var(--primary-soft-fg);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-fg: var(--accent-soft-fg);
+  --color-saffron: var(--saffron);
+  --color-saffron-soft: var(--saffron-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-ring: var(--ring);
+  --color-overlay: var(--overlay);
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
+
+  --font-sans: var(--font-jakarta), var(--font-bangla), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-jakarta), var(--font-bangla), ui-sans-serif, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Fluid type scale (clamp: mobile → 4K) */
+  --text-display: clamp(2.4rem, 1.35rem + 4.2vw, 5rem);
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: -0.035em;
+  --text-h1: clamp(1.9rem, 1.3rem + 2.3vw, 3.25rem);
+  --text-h1--line-height: 1.1;
+  --text-h1--letter-spacing: -0.025em;
+  --text-h2: clamp(1.45rem, 1.15rem + 1.2vw, 2.25rem);
+  --text-h2--line-height: 1.18;
+  --text-h2--letter-spacing: -0.02em;
+  --text-h3: clamp(1.15rem, 1.05rem + 0.45vw, 1.45rem);
+  --text-h3--line-height: 1.3;
+  --text-lead: clamp(1.02rem, 0.95rem + 0.35vw, 1.25rem);
+  --text-lead--line-height: 1.6;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-glow: var(--shadow-glow);
+
+  /* Extra large-screen breakpoints (media queries use 16px rem). */
+  --breakpoint-3xl: 120rem; /* 1920 */
+  --breakpoint-4xl: 160rem; /* 2560 */
+  --breakpoint-5xl: 240rem; /* 3840 */
+
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-float: float 8s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  /* CSS-only entrance (no JS on the landing hero); stagger with [animation-delay]. */
+  --animate-fade-up: fade-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* Landing polish: transform/opacity/background-position only, so they stay on the compositor. */
+  --animate-aurora: aurora 18s ease-in-out infinite alternate;
+  --animate-aurora-slow: aurora 26s ease-in-out infinite alternate-reverse;
+  --animate-shine: shine 3.6s ease-in-out infinite;
+  --animate-orbit: orbit 28s linear infinite;
+  --animate-blink: blink 1.4s ease-in-out infinite;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translate3d(0, 18px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(0, -12px, 0); }
+  }
+  @keyframes pulse-ring {
+    0% { transform: scale(0.9); opacity: 0.7; }
+    80%, 100% { transform: scale(1.8); opacity: 0; }
+  }
+}
+
+/* z-index scale */
+:root {
+  --z-base: 0;
+  --z-sticky: 30;
+  --z-header: 40;
+  --z-chat: 45;
+  --z-overlay: 50;
+  --z-modal: 60;
+  --z-popover: 65;
+  --z-toast: 70;
+}
+
+/* ───────────── Base ───────────── */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+  /* Root size grows on very large screens so everything (rem-based) scales. */
+  @media (min-width: 1920px) { html { font-size: 106.25%; } }
+  @media (min-width: 2560px) { html { font-size: 125%; } }
+  @media (min-width: 3840px) { html { font-size: 162.5%; } }
+
+  body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+  *, ::before, ::after { border-color: var(--border); }
+  ::selection { background: var(--primary); color: var(--primary-fg); }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  h1, h2, h3, .font-display { font-family: var(--font-display); }
+  img, video { max-width: 100%; height: auto; }
+  [hidden] { display: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ───────────── Utilities ───────────── */
+@utility container-app {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 0.6rem + 2vw, 2.5rem);
+  max-width: 80rem;
+  @media (min-width: 1920px) { max-width: 92rem; }
+  @media (min-width: 2560px) { max-width: 104rem; }
+}
+
+@utility glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: saturate(1.6) blur(16px);
+  backdrop-filter: saturate(1.6) blur(16px);
+  border: 1px solid var(--glass-border);
+}
+
+@utility text-gradient {
+  background-image: linear-gradient(115deg, var(--primary) 5%, #7c3aed 45%, var(--accent) 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Diagonal light sweep over a button or card (put it on a `relative overflow-hidden` parent). */
+@utility sheen {
+  position: relative;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    width: 40%;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
+    animation: shine 3.6s ease-in-out infinite;
+  }
+}
+
+/*
+ * Scroll reveal with no JavaScript: where the browser supports scroll-driven animations the element eases in as it
+ * enters the viewport; everywhere else it is simply visible, so content is never hidden.
+ */
+@utility reveal {
+  @supports (animation-timeline: view()) {
+    animation: reveal-in linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 32%;
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+}
+@keyframes aurora {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(4%, 6%, 0) scale(1.12); }
+  100% { transform: translate3d(-5%, 2%, 0) scale(0.96); }
+}
+@keyframes shine {
+  0%, 55% { transform: translateX(-120%) skewX(-18deg); }
+  100% { transform: translateX(260%) skewX(-18deg); }
+}
+@keyframes orbit {
+  to { transform: rotate(360deg); }
+}
+@keyframes blink {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+@keyframes reveal-in {
+  from { opacity: 0; transform: translate3d(0, 28px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@utility bg-brand-gradient {
+  background-image: linear-gradient(120deg, #4338ca 0%, #6d28d9 48%, #059669 100%);
+}
+
+/* Soft mesh gradient used behind heroes. */
+@utility bg-mesh {
+  background-image:
+    radial-gradient(60rem 30rem at 10% -10%, var(--mesh-1), transparent 60%),
+    radial-gradient(50rem 28rem at 95% 0%, var(--mesh-2), transparent 60%),
+    radial-gradient(40rem 24rem at 50% 110%, var(--mesh-3), transparent 60%);
+}
+
+/* Film grain overlay (inline SVG noise, ~300 bytes). */
+@utility grain {
+  position: relative;
+  isolation: isolate;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+}
+
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+@utility safe-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+/* Skip link: visible only when focused. */
+.skip-link {
+  position: fixed;
+  left: 1rem;
+  top: -4rem;
+  z-index: var(--z-toast);
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--primary-fg);
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  transition: top 0.15s ease;
+}
+.skip-link:focus { top: 1rem; }
+
+/* Search highlight mark */
+mark.hl {
+  background: color-mix(in oklab, var(--saffron) 22%, transparent);
+  color: inherit;
+  border-radius: 0.25rem;
+  padding: 0 0.1em;
+}
+
+/* Lift the chat launcher above the mobile bottom tab bar in the user portal. */
+@media (max-width: 767px) {
+  body:has([data-bottom-nav]) [data-chat-launcher] {
+    bottom: calc(5.25rem + env(safe-area-inset-bottom));
+  }
+  body:has([data-bottom-nav]) [data-chat-panel] {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+}

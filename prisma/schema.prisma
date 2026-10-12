@@ -1,0 +1,852 @@
+// CampusOS - City University
+// Prisma 7: connection URLs live in prisma.config.ts (CLI/migrations -> DIRECT_URL)
+// and in src/lib/prisma.ts (runtime driver adapter -> pooled DATABASE_URL).
+// Full-text search columns/indexes and pg_trgm are created by raw SQL migrations;
+// see docs/ARCHITECTURE.md#search.
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [pg_trgm]
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum Role {
+  USER
+  MODERATOR
+  CLUB_ADMIN
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum OtpPurpose {
+  SIGNUP_VERIFY
+  PASSWORD_RESET
+}
+
+enum ClubCategory {
+  TECHNOLOGY
+  ACADEMIC
+  CULTURAL
+  SPORTS
+  ARTS
+  DEBATE
+  SOCIAL_SERVICE
+  OTHER
+}
+
+enum ClubMemberRole {
+  MEMBER
+  EXECUTIVE
+  ADMIN
+}
+
+enum EventType {
+  WORKSHOP
+  CONTEST
+  SEMINAR
+  CULTURAL
+  SPORTS
+  MEETUP
+  OTHER
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  CHECKED_IN
+  CANCELLED
+}
+
+enum ResourceType {
+  NOTES
+  QUESTION_PAPER
+  LAB_MANUAL
+  NOTICE
+  OTHER
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum KnowledgeCategory {
+  BUS
+  RULES
+  EXAM
+  ADMISSION
+  GENERAL
+  FAQ
+}
+
+enum KnowledgeSourceType {
+  MANUAL
+  NOTICE
+  BUS_ROUTE
+  EVENT
+  RESOURCE
+  IMPORT
+}
+
+enum BusDirection {
+  TO_CAMPUS
+  FROM_CAMPUS
+}
+
+enum NoticeCategory {
+  CLASS_CANCELLATION
+  EXAM
+  GENERAL
+  URGENT
+  FORM_DEADLINE
+}
+
+enum LostFoundType {
+  LOST
+  FOUND
+}
+
+enum LostFoundCategory {
+  ELECTRONICS
+  ID_CARD
+  DOCUMENTS
+  BOOKS
+  WALLET
+  KEYS
+  BAG
+  CLOTHING
+  ACCESSORIES
+  OTHER
+}
+
+enum LostFoundStatus {
+  OPEN
+  CLAIMED
+  RESOLVED
+  REJECTED
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ComplaintCategory {
+  ACADEMIC
+  ADMINISTRATIVE
+  FACILITIES
+  TRANSPORT
+  IT_SERVICES
+  FINANCE
+  HARASSMENT
+  OTHER
+}
+
+enum ComplaintStatus {
+  RECEIVED
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+enum ComplaintPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum NotificationType {
+  SYSTEM
+  EVENT
+  RESOURCE
+  NOTICE
+  LOST_FOUND
+  COMPLAINT
+  CLUB
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum UploadKind {
+  IMAGE
+  PDF
+}
+
+enum FollowTargetType {
+  DEPARTMENT
+  COURSE
+  CLUB
+}
+
+enum ChatFeedback {
+  HELPFUL
+  NOT_HELPFUL
+}
+
+// ───────────────────────────── Identity ─────────────────────────────
+
+model User {
+  id               String    @id @default(cuid())
+  name             String    @db.VarChar(120)
+  /// Always stored lower-cased.
+  email            String    @unique @db.VarChar(254)
+  passwordHash     String
+  role             Role      @default(USER)
+  studentId        String?   @unique @db.VarChar(32)
+  departmentId     String?
+  batch            String?   @db.VarChar(16)
+  phone            String?   @db.VarChar(20)
+  avatarUrl        String?
+  isEmailVerified  Boolean   @default(false)
+  emailVerifiedAt  DateTime?
+  isActive         Boolean   @default(true)
+  /// Bump to invalidate every JWT issued to this user.
+  tokenVersion     Int       @default(0)
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  emailOtps             EmailOtp[]
+  clubMemberships       ClubMember[]
+  eventsCreated         Event[]             @relation("EventCreatedBy")
+  eventRegistrations    EventRegistration[] @relation("RegistrationUser")
+  eventBookmarks        EventBookmark[]
+  checkInsPerformed     EventRegistration[] @relation("RegistrationCheckedInBy")
+  resourcesUploaded     Resource[]          @relation("ResourceUploadedBy")
+  resourcesReviewed     Resource[]          @relation("ResourceReviewedBy")
+  resourceBookmarks     ResourceBookmark[]
+  knowledgeEntries      KnowledgeEntry[]
+  noticesCreated        Notice[]
+  campusClosuresCreated CampusClosure[]
+  formLinksCreated      FormLink[]
+  lostFoundReported     LostFoundItem[]     @relation("LostFoundReporter")
+  lostFoundResolved     LostFoundItem[]     @relation("LostFoundResolvedBy")
+  claimRequests         ClaimRequest[]      @relation("ClaimClaimer")
+  claimsReviewed        ClaimRequest[]      @relation("ClaimReviewedBy")
+  complaints            Complaint[]         @relation("ComplaintUser")
+  complaintsAssigned    Complaint[]         @relation("ComplaintAssignee")
+  complaintUpdates      ComplaintUpdate[]
+  notifications         Notification[]
+  follows               Follow[]
+  chatSessions          ChatSession[]
+  chatMessages          ChatMessage[]
+  auditLogs             AuditLog[]
+  uploadedFiles         UploadedFile[]
+
+  @@index([role])
+  @@index([departmentId])
+  @@index([createdAt])
+}
+
+model EmailOtp {
+  id         String     @id @default(cuid())
+  userId     String
+  purpose    OtpPurpose
+  /// bcrypt/sha-256 hash of the code - the plain code is never stored.
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int        @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+}
+
+// ───────────────────────────── Academic ─────────────────────────────
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String   @unique @db.VarChar(120)
+  code      String   @unique @db.VarChar(16)
+  faculty   String?  @db.VarChar(120)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  courses   Course[]
+  resources Resource[]
+  notices   Notice[]
+}
+
+model Course {
+  id           String   @id @default(cuid())
+  code         String   @db.VarChar(16)
+  title        String   @db.VarChar(200)
+  departmentId String
+  semester     Int
+  credits      Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  resources  Resource[]
+  notices    Notice[]
+
+  @@unique([departmentId, code])
+  @@index([departmentId, semester])
+}
+
+// ───────────────────────────── Clubs & Events ─────────────────────────────
+
+model Club {
+  id          String       @id @default(cuid())
+  name        String       @unique @db.VarChar(120)
+  slug        String       @unique @db.VarChar(140)
+  description String
+  logoUrl     String?
+  coverUrl    String?
+  category    ClubCategory @default(OTHER)
+  isActive    Boolean      @default(true)
+  /// Denormalized counter, maintained by the club service.
+  memberCount Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  members   ClubMember[]
+  events    Event[]
+  formLinks FormLink[]
+
+  @@index([isActive, category])
+}
+
+/// Club admins are ClubMember rows with role = ADMIN.
+model ClubMember {
+  id        String         @id @default(cuid())
+  userId    String
+  clubId    String
+  role      ClubMemberRole @default(MEMBER)
+  joinedAt  DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clubId])
+  @@index([clubId, role])
+}
+
+model Event {
+  id                   String      @id @default(cuid())
+  title                String      @db.VarChar(200)
+  slug                 String      @unique @db.VarChar(220)
+  description          String
+  clubId               String
+  type                 EventType   @default(OTHER)
+  startAt              DateTime
+  endAt                DateTime
+  venue                String      @db.VarChar(200)
+  bannerUrl            String?
+  capacity             Int?
+  registrationDeadline DateTime?
+  status               EventStatus @default(DRAFT)
+  /// Denormalized counter of active (non-cancelled) registrations.
+  registrationCount    Int         @default(0)
+  /// Set once the "starts tomorrow" reminder has gone out (idempotent cron).
+  reminderSentAt       DateTime?
+  createdById          String
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  deletedAt            DateTime?
+
+  club          Club                @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  createdBy     User                @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  registrations EventRegistration[]
+  bookmarks     EventBookmark[]
+
+  @@index([status, startAt])
+  @@index([clubId])
+  @@index([type])
+}
+
+model EventRegistration {
+  id            String             @id @default(cuid())
+  eventId       String
+  userId        String
+  /// Opaque random token encoded in the attendee's QR code.
+  qrToken       String             @unique @db.VarChar(64)
+  status        RegistrationStatus @default(REGISTERED)
+  checkedInAt   DateTime?
+  checkedInById String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  event       Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user        User  @relation("RegistrationUser", fields: [userId], references: [id], onDelete: Cascade)
+  checkedInBy User? @relation("RegistrationCheckedInBy", fields: [checkedInById], references: [id], onDelete: SetNull)
+
+  @@unique([eventId, userId])
+  @@index([eventId, status])
+  @@index([userId, createdAt])
+}
+
+/// "Saved" events (user bookmarks).
+model EventBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([userId, createdAt])
+}
+
+// ───────────────────────────── Resources ─────────────────────────────
+
+model Resource {
+  id              String           @id @default(cuid())
+  title           String           @db.VarChar(200)
+  description     String?
+  type            ResourceType
+  courseId        String?
+  /// Free-text course when it is not in the catalogue (mutually exclusive with courseId).
+  courseName      String?          @db.VarChar(120)
+  departmentId    String
+  semester        Int?
+  year            Int?
+  fileUrl         String
+  fileKey         String           @unique
+  /// Bytes.
+  fileSize        Int
+  mimeType        String           @db.VarChar(100)
+  uploadedById    String
+  status          ModerationStatus @default(PENDING)
+  reviewedById    String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  downloadCount   Int              @default(0)
+  bookmarkCount   Int              @default(0)
+  /// Demo/seed data pointing at a shared sample PDF (excluded from orphan cleanup).
+  isSample        Boolean          @default(false)
+  tags            String[]
+  /// Generated column (title A, tags A, description B) - see raw SQL migration.
+  searchVector    Unsupported("tsvector")? @default(dbgenerated())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+
+  department Department         @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  course     Course?            @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  uploadedBy User               @relation("ResourceUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict)
+  reviewedBy User?              @relation("ResourceReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  bookmarks  ResourceBookmark[]
+
+  @@index([status, departmentId, type, semester, createdAt])
+  @@index([courseId, status])
+  @@index([uploadedById, createdAt])
+  @@index([tags], type: Gin)
+  @@index([searchVector], type: Gin)
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "Resource_title_trgm_idx")
+}
+
+model ResourceBookmark {
+  id         String   @id @default(cuid())
+  userId     String
+  resourceId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, resourceId])
+  @@index([userId, createdAt])
+  @@index([resourceId])
+}
+
+// ───────────────────────────── Knowledge base / Chatbot ─────────────────────────────
+
+model KnowledgeEntry {
+  id           String              @id @default(cuid())
+  category     KnowledgeCategory
+  question     String
+  answer       String
+  keywords     String[]
+  sourceType   KnowledgeSourceType @default(MANUAL)
+  sourceRefId  String?
+  isPublished  Boolean             @default(true)
+  /// Demo/seed content that an admin must verify before relying on it.
+  isSample     Boolean             @default(false)
+  viewCount    Int                 @default(0)
+  createdById  String?
+  /// Generated column (question A, keywords A, answer B) - see raw SQL migration.
+  searchVector Unsupported("tsvector")? @default(dbgenerated())
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  deletedAt    DateTime?
+
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([isPublished, category])
+  @@index([sourceType, sourceRefId])
+  @@index([keywords], type: Gin)
+  @@index([searchVector], type: Gin)
+  @@index([question(ops: raw("gin_trgm_ops"))], type: Gin, map: "KnowledgeEntry_question_trgm_idx")
+}
+
+model ChatSession {
+  id            String   @id @default(cuid())
+  /// Unguessable client-facing session id (anonymous sessions are addressed only by this).
+  token         String   @unique @db.VarChar(64)
+  userId        String?
+  messageCount  Int      @default(0)
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  user     User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages ChatMessage[]
+
+  @@index([userId, lastMessageAt])
+}
+
+model ChatMessage {
+  id              String   @id @default(cuid())
+  sessionId       String
+  userId          String?
+  role            ChatRole
+  content         String
+  matchedEntryIds String[]
+  /// Retrieval confidence 0..1 (assistant messages only).
+  confidence      Float?
+  /// false when the bot could not answer - feeds the "unanswered questions" admin view.
+  isAnswered      Boolean  @default(true)
+  /// Deterministic intent that produced the answer (e.g. NEXT_BUS), null for KB retrieval.
+  intent          String?  @db.VarChar(40)
+  feedback        ChatFeedback?
+  feedbackAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, createdAt])
+  @@index([isAnswered, createdAt])
+  @@index([feedback, createdAt])
+}
+
+// ───────────────────────────── Transport ─────────────────────────────
+
+model BusRoute {
+  id        String    @id @default(cuid())
+  name      String    @db.VarChar(120)
+  code      String    @unique @db.VarChar(16)
+  /// Ordered array: [{ name: string, lat?: number, lng?: number, offsetMinutes?: number }]
+  stops     Json
+  notes     String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  trips BusTrip[]
+
+  @@index([isActive])
+}
+
+model BusTrip {
+  id            String       @id @default(cuid())
+  routeId       String
+  /// Local (Asia/Dhaka) time of day, "HH:mm" - sorts lexicographically.
+  departureTime String       @db.VarChar(5)
+  direction     BusDirection
+  /// 0 = Sunday ... 6 = Saturday. Only Friday to Tuesday (5, 6, 0, 1, 2): a CHECK constraint rejects Wednesday (3) and Thursday (4).
+  daysOfWeek    Int[]
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  route BusRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@index([routeId, isActive])
+  @@index([direction, departureTime])
+}
+
+/// A special closure on one Dhaka calendar date (public holiday, exam-day bus change). Overrides the weekly rule.
+model CampusClosure {
+  id           String   @id @default(cuid())
+  /// Dhaka calendar date (no time).
+  date         DateTime @unique @db.Date
+  title        String   @db.VarChar(120)
+  closesCampus Boolean  @default(true)
+  suspendsBus  Boolean  @default(true)
+  note         String?  @db.VarChar(300)
+  createdById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([date, closesCampus, suspendsBus])
+}
+
+// ───────────────────────────── Notices & Forms ─────────────────────────────
+
+model Notice {
+  id            String         @id @default(cuid())
+  title         String         @db.VarChar(200)
+  body          String
+  category      NoticeCategory @default(GENERAL)
+  departmentId  String?
+  courseId      String?
+  pinned        Boolean        @default(false)
+  expiresAt     DateTime?
+  attachmentUrl String?
+  createdById   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  course     Course?     @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  createdBy  User        @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([pinned, createdAt])
+  @@index([category, createdAt])
+  @@index([departmentId, createdAt])
+  @@index([expiresAt])
+}
+
+/// Central listing of Google Forms / external sign-up links.
+model FormLink {
+  id          String    @id @default(cuid())
+  title       String    @db.VarChar(200)
+  description String?
+  url         String
+  deadline    DateTime?
+  clubId      String?
+  isOpen      Boolean   @default(true)
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  club      Club? @relation(fields: [clubId], references: [id], onDelete: SetNull)
+  createdBy User  @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([isOpen, deadline])
+  @@index([clubId])
+}
+
+// ───────────────────────────── Lost & Found ─────────────────────────────
+
+model LostFoundItem {
+  id             String            @id @default(cuid())
+  type           LostFoundType
+  title          String            @db.VarChar(160)
+  description    String
+  category       LostFoundCategory @default(OTHER)
+  locationText   String            @db.VarChar(200)
+  occurredAt     DateTime
+  imageUrls      String[]
+  status         LostFoundStatus   @default(OPEN)
+  contactVisible Boolean           @default(false)
+  reporterId     String
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?
+
+  reporter   User           @relation("LostFoundReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  resolvedBy User?          @relation("LostFoundResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  claims     ClaimRequest[]
+
+  @@index([status, type, createdAt])
+  @@index([category, status])
+  @@index([reporterId, createdAt])
+}
+
+model ClaimRequest {
+  id           String      @id @default(cuid())
+  itemId       String
+  claimerId    String
+  message      String
+  status       ClaimStatus @default(PENDING)
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  item       LostFoundItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  claimer    User          @relation("ClaimClaimer", fields: [claimerId], references: [id], onDelete: Cascade)
+  reviewedBy User?         @relation("ClaimReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@unique([itemId, claimerId])
+  @@index([itemId, status])
+  @@index([claimerId, createdAt])
+}
+
+// ───────────────────────────── Complaints ─────────────────────────────
+
+model Complaint {
+  id             String            @id @default(cuid())
+  /// Human-readable, e.g. CU-2026-000123 (allocated from TicketCounter).
+  ticketNo       String            @unique @db.VarChar(20)
+  category       ComplaintCategory
+  subject        String            @db.VarChar(200)
+  description    String
+  attachmentUrls String[]
+  /// Hides the reporter's identity from staff; userId is kept so the reporter can track it.
+  isAnonymous    Boolean           @default(false)
+  status         ComplaintStatus   @default(RECEIVED)
+  priority       ComplaintPriority @default(MEDIUM)
+  userId         String
+  assignedToId   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  user       User              @relation("ComplaintUser", fields: [userId], references: [id], onDelete: Restrict)
+  assignedTo User?             @relation("ComplaintAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  updates    ComplaintUpdate[]
+
+  @@index([status, priority, createdAt])
+  @@index([userId, createdAt])
+  @@index([assignedToId, status])
+}
+
+model ComplaintUpdate {
+  id          String           @id @default(cuid())
+  complaintId String
+  status      ComplaintStatus?
+  note        String
+  /// Internal notes are visible to staff only.
+  isInternal  Boolean          @default(false)
+  byUserId    String
+  createdAt   DateTime         @default(now())
+
+  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  byUser    User      @relation(fields: [byUserId], references: [id], onDelete: Restrict)
+
+  @@index([complaintId, createdAt])
+}
+
+/// Per-year sequence used to allocate Complaint.ticketNo atomically.
+model TicketCounter {
+  year      Int      @id
+  lastValue Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+// ───────────────────────────── Platform ─────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType @default(SYSTEM)
+  title     String           @db.VarChar(200)
+  body      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String   @db.VarChar(64)
+  entityType String   @db.VarChar(64)
+  entityId   String?
+  metadata   Json?
+  ip         String?  @db.VarChar(64)
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+}
+
+/// Users following a department, course or club (drives notice fan-out).
+model Follow {
+  id         String           @id @default(cuid())
+  userId     String
+  targetType FollowTargetType
+  targetId   String
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId])
+  @@index([targetType, targetId])
+}
+
+/// Aggregated global-search terms for analytics (one row per normalised term).
+model SearchTerm {
+  term           String   @id @db.VarChar(100)
+  count          Int      @default(1)
+  lastSearchedAt DateTime @default(now())
+
+  @@index([count])
+}
+
+/// Fixed-window counters for DB-backed rate limiting.
+model RateLimit {
+  key     String   @id @db.VarChar(200)
+  count   Int      @default(0)
+  resetAt DateTime
+
+  @@index([resetAt])
+}
+
+/// Every uploaded file is tracked so orphaned objects can be cleaned up.
+model UploadedFile {
+  id           String     @id @default(cuid())
+  key          String     @unique
+  url          String
+  name         String     @db.VarChar(255)
+  /// Bytes.
+  size         Int
+  mimeType     String     @db.VarChar(100)
+  kind         UploadKind
+  uploadedById String?
+  createdAt    DateTime   @default(now())
+
+  uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([uploadedById, createdAt])
+  @@index([kind, createdAt])
+}
+
+/// Single-row site configuration (key = "site"): banner message and maintenance switch.
+model SiteSetting {
+  key         String   @id @db.VarChar(32)
+  value       Json
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
